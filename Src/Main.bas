@@ -1,7 +1,12 @@
 Attribute VB_Name = "Main"
 Option Explicit
 
+Const IniFileName = "Settings.ini"
+Const KeyCloseAfterSave = "CloseAfterSave"
+Public Const MainSection = "Main"
+
 Public gFSO As FileSystemObject
+Public gIniFilePath As String
 Dim swApp As Object
 
 Sub Main()
@@ -15,6 +20,7 @@ Sub Main()
   Set CurrentDoc = swApp.ActiveDoc
   If CurrentDoc Is Nothing Then Exit Sub
   If CurrentDoc.GetType <> swDocDRAWING Then Exit Sub
+  Init
   
   DocPath = CurrentDoc.GetPathName
   If DocPath = "" Then
@@ -22,8 +28,20 @@ Sub Main()
     Exit Sub
   End If
   SaveAsPDF CurrentDoc, CreateNewName(DocPath)
+  If GetBooleanSetting(KeyCloseAfterSave) Then
+    swApp.CloseDoc CurrentDoc.GetPathName
+  End If
   
 End Sub
+
+Function Init() 'hide
+
+  gIniFilePath = gFSO.BuildPath(swApp.GetCurrentMacroPathFolder, IniFileName)
+  If Not gFSO.FileExists(gIniFilePath) Then
+    CreateDefaultIniFile
+  End If
+
+End Function
 
 Sub SaveAsPDF(CurrentDoc As ModelDoc2, NewName As String)
 
@@ -37,5 +55,19 @@ End Sub
 Function CreateNewName(Path As String) As String
 
   CreateNewName = gFSO.BuildPath(gFSO.GetParentFolderName(Path), gFSO.GetBaseName(Path) + ".PDF")
+
+End Function
+
+Function CreateDefaultIniFile() 'hide
+
+  Const DefaultText = "[" + MainSection + "]" + vbNewLine _
+    + KeyCloseAfterSave + " = False" + vbNewLine
+
+  Dim objStream As Stream
+      
+  Set objStream = New Stream
+  objStream.Open
+  objStream.WriteText DefaultText
+  objStream.SaveToFile gIniFilePath
 
 End Function
